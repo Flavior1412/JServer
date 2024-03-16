@@ -2,36 +2,33 @@ const db = require('../models')
 const ROLES = db.ROLES;
 const User = db.user;
 
-checkDuplicateUserNameOrEmail = (req, res, next) => {
-  User.findOne({
-    userName: req.body.userName
-  }).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
-    }
-    if (user) {
+checkDuplicateUserNameOrEmail = async (req, res, next) => {
+  if(!req.body.userName) {
+    res.status(400).send({ message: 'Fail! user name can not be blank' });
+    return;
+  }
+  try {
+    const userWithName = await User.findOne({
+      userName: req.body.userName
+    }).exec();
+    if (userWithName) {
       res.status(400).send({ message: 'Fail! user name is already in use!' });
       return;
     }
-
-    // Email
-    User.findOne({
+    const userWithEmail = await User.findOne({
       email: req.body.email
-    }).exec((err, user) => {
-      if (err) {
-        res.status(500).send({ message: err });
-        return;
-      }
+    }).exec();
 
-      if (user) {
-        res.status(400).send({ message: "Failed! Email is already in use!" });
-        return;
-      }
-      next();
-    });
-    // next();
-  });
+    if (userWithEmail) {
+      res.status(400).send({ message: "Failed! Email is already in use!" });
+      return;
+    }
+    next();
+    console.log('aaaaa')
+
+  } catch (err) {
+    res.status(500).send({ message: err });
+  }
 };
 
 checkRolesExisted = (req, res, next) => {

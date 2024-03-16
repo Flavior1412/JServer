@@ -20,32 +20,26 @@ verifyToken = (req, res, next) => {
   })
 }
 
-isAdmin = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
+isAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.body.userId).exec();
+    if (!user) {
+      return res.status(404).send({ message: 'User not found' });
     }
-    Role.find(
-      { _id: { $in: user.roles } },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err })
-        }
-        roles.forEach(role => {
-          if (role.name === 'admin') {
-            next();
-            return;
-          }
-        })
-        res.status(403).send({message: 'Require admin role!'})
-        return;
-      }
-    );
-  });
+    const roles = await Role.find({ _id: { $in: user.roles } });
+    if (!roles) {
+      return res.status(403).send({ message: 'Require admin role!' })
+    }
+    const adminRole = roles.findIndex(role => role.name === 'admin');
+    return adminRole === -1 ?
+      res.status(403).send({ message: 'Require admin role!' }) :
+      next();
+  } catch (error) {
+    return res.status(500).send({ message: error.message });
+  }
 };
 
-const authJwt ={
+const authJwt = {
   verifyToken,
   isAdmin
 };
